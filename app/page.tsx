@@ -16,7 +16,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [mobileNav, setMobileNav] = useState(false);\n  const [model, setModel] = useState("qwen2.5-coder:1.5b");\n  const [connection, setConnection] = useState<"checking" | "connected" | "offline">("checking");\n  const [availableModels, setAvailableModels] = useState<string[]>([]);\n\n  useEffect(() => {\n    fetch("/api/models").then((response) => response.json()).then((data) => {\n      setConnection(data.connected ? "connected" : "offline");\n      const names = Array.isArray(data.models) ? data.models.map((item: { name: string }) => item.name) : [];\n      setAvailableModels(names);\n      if (names.length && !names.includes(model)) setModel(names[0]);\n    }).catch(() => setConnection("offline"));\n  }, []);
+  const [mobileNav, setMobileNav] = useState(false);\n  const [model, setModel] = useState("qwen2.5-coder:1.5b");\n  const [connection, setConnection] = useState<"checking" | "connected" | "offline">("checking");\n  const [availableModels, setAvailableModels] = useState<string[]>([]);\n\n  useEffect(() => {\n    fetch("/api/models").then((response) => response.json()).then((data) => {\n      setConnection(data.connected ? "connected" : "offline");\n      const names = Array.isArray(data.models) ? data.models.map((item: { name: string }) => item.name) : [];\n      setAvailableModels(names);\n      if (names.length && !names.includes("qwen2.5-coder:1.5b")) setModel(names[0]);\n    }).catch(() => setConnection("offline"));\n  }, []);
 
   async function send(text = input) {
     const value = text.trim();
