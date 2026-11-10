@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Activity, ArrowUp, Bot, Braces, ChevronDown, CircleHelp, Code2, Command, FileCode2, FolderGit2, Github, Menu, Plus, Settings2, Sparkles, Terminal, WandSparkles } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -17,6 +17,18 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [model, setModel] = useState("qwen2.5-coder:1.5b");
+  const [connection, setConnection] = useState<"checking" | "connected" | "offline">("checking");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/models").then((response) => response.json()).then((data) => {
+      setConnection(data.connected ? "connected" : "offline");
+      const names = Array.isArray(data.models) ? data.models.map((item: { name: string }) => item.name) : [];
+      setAvailableModels(names);
+      if (names.length && !names.includes("qwen2.5-coder:1.5b")) setModel(names[0]);
+    }).catch(() => setConnection("offline"));
+  }, []);
 
   async function send(text = input) {
     const value = text.trim();
@@ -30,7 +42,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next })
+        body: JSON.stringify({ messages: next, model })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The request could not be completed.");
@@ -61,7 +73,7 @@ export default function Home() {
         <div className="nav-label recent-label">RECENT</div>
         <div className="empty-history">Your conversations will appear here.</div>
         <div className="sidebar-bottom">
-          <div className="status-line"><span className="status-dot"/> Workspace ready</div>
+          <div className="status-line"><span className="status-dot"/>{connection === "connected" ? "Ollama connected" : connection === "checking" ? "Checking Ollama…" : "Ollama offline"}</div>
           <a className="nav-item" href="#setup"><Settings2 size={17}/> Configuration</a>
           <a className="nav-item" href="#help"><CircleHelp size={17}/> Help & documentation</a>
           <div className="profile"><div className="avatar">C</div><div><strong>CloudeAI</strong><small>Personal workspace</small></div><ChevronDown size={15}/></div>
@@ -69,12 +81,12 @@ export default function Home() {
       </aside>
 
       <section className="main-panel">
-        <header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={19}/></button><div className="breadcrumb"><span>Workspace</span><span className="slash">/</span><strong>AI assistant</strong></div><div className="top-actions"><span className="model-pill"><span className="model-dot"/> Claude API <ChevronDown size={13}/></span><a className="github-link" href="https://github.com/adnanyogi88-dev/cloudeai" target="_blank" rel="noreferrer"><Github size={16}/> Repository</a></div></header>
+        <header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={19}/></button><div className="breadcrumb"><span>Workspace</span><span className="slash">/</span><strong>AI assistant</strong></div><div className="top-actions"><span className="model-pill"><span className="model-dot"/> Ollama Local <ChevronDown size={13}/></span><a className="github-link" href="https://github.com/adnanyogi88-dev/cloudeai" target="_blank" rel="noreferrer"><Github size={16}/> Repository</a></div></header>
 
         <div className="content">
           <div className="eyebrow"><span className="eyebrow-line"/> YOUR AI-POWERED DEVELOPMENT SPACE</div>
           <div className="hero-title">Build something<br/><span>remarkable.</span></div>
-          <p className="hero-copy">Your ideas, your code, one intelligent workspace.<br className="desktop-break"/> Start a conversation or choose a workflow below.</p>
+          <p className="hero-copy">Your ideas, your code, one intelligent local workspace.<br className="desktop-break"/> Start a conversation or choose a workflow below.</p>
 
           {messages.length === 0 ? (
             <div className="suggestion-grid">
@@ -87,7 +99,7 @@ export default function Home() {
               <div id="latest"/>
             </div>
           )}
-          {error && <div className="error-box">{error}{error.includes("ANTHROPIC_API_KEY") && <a href="#setup"> See setup instructions.</a>}</div>}
+          {error && <div className="error-box">{error}</div>}
 
           <form className="composer" onSubmit={onSubmit}>
             <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder="Ask CloudeAI anything about your code…" rows={2} aria-label="Message CloudeAI"/>
@@ -95,9 +107,9 @@ export default function Home() {
           </form>
           <div className="composer-note">Press <kbd>Enter</kbd> to send · <kbd>Shift + Enter</kbd> for a new line</div>
 
-          <div className="terminal-banner" id="terminal"><div className="terminal-symbol"><Terminal size={20}/></div><div className="terminal-text"><strong>Prefer working in your terminal?</strong><span>Use CloudeAI from your command line with the same API key.</span></div><a href="#setup">Get started <ArrowUp size={14}/></a></div>
+          <div className="terminal-banner" id="terminal"><div className="terminal-symbol"><Terminal size={20}/></div><div className="terminal-text"><strong>Prefer working in your terminal?</strong><span>Use CloudeAI from PowerShell with your local Ollama model.</span></div><a href="#setup">Get started <ArrowUp size={14}/></a></div>
 
-          <section className="setup-section" id="setup"><div className="section-heading"><span>01 / CONFIGURATION</span><h2>Connect your AI engine</h2><p>Add your Anthropic API key as a server-side environment variable in Vercel. Never put it in browser code.</p></div><div className="setup-card"><div className="setup-card-title"><Activity size={16}/> Vercel environment variable</div><code>ANTHROPIC_API_KEY</code><ol><li>Open your Vercel project settings.</li><li>Go to <b>Environment Variables</b>.</li><li>Add <code>ANTHROPIC_API_KEY</code> and your API key. Apply it to Production and Preview.</li><li>Redeploy the latest deployment.</li></ol><a href="https://vercel.com/docs/projects/environment-variables" target="_blank" rel="noreferrer">Vercel environment variable guide ↗</a></div></section>
+          <section className="setup-section" id="setup"><div className="section-heading"><span>01 / LOCAL AI ENGINE</span><h2>Connect your AI engine</h2><p>CloudeAI uses Ollama running on this computer. No Anthropic API key or paid inference API is required.</p></div><div className="setup-card"><div className="setup-card-title"><Activity size={16}/> Local Ollama status</div><code>{connection === "connected" ? "CONNECTED · 127.0.0.1:11434" : connection === "checking" ? "CHECKING OLLAMA…" : "OLLAMA NOT REACHABLE"}</code><p>Selected model: <b>{model}</b></p>{availableModels.length > 0 && <label>Installed model <select value={model} onChange={(event) => setModel(event.target.value)}>{availableModels.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>}<ol><li>Keep Ollama running on your Surface.</li><li>Check installed models with <code>ollama list</code>.</li><li>Start CloudeAI locally using <code>npm run dev</code>.</li><li>Open <code>http://localhost:3000</code>.</li></ol><a href="https://ollama.com/download" target="_blank" rel="noreferrer">Ollama download and setup ↗</a></div></section>
           <footer id="help">CloudeAI <span>·</span> Built for thoughtful development</footer>
         </div>
       </section>

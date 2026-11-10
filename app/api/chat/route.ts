@@ -1,48 +1,76 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type IncomingMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = { role: "user" | "assistant"; content: string };
+const OLLAMA_URL = (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:1.5b";
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured on the server. Add it in Vercel → Project Settings → Environment Variables, then redeploy." },
-      { status: 503 }
-    );
-  }
-
   try {
     const body = await request.json();
-    const messages = body.messages as IncomingMessage[];
-    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 30) {
-      return NextResponse.json({ error: "Send between 1 and 30 messages." }, { status: 400 });
+    const messages = body?.messages as ChatMessage[];
+    const model = typeof body?.model === "string" && body.model.trim() ? body.model.trim() : DEFAULT_MODEL;
+
+    if (!Array.isArray(messages) || messages.length < 1 || messages.length > 30) {
+      return NextResponse.json({ error: "Kirim antara 1 sampai 30 pesan." }, { status: 400 });
     }
 
     const safeMessages = messages.map((message) => {
-      if (!["user", "assistant"].includes(message.role) || typeof message.content !== "string") {
-        throw new Error("Invalid message format.");
+      if (!message || !["user", "assistant"].includes(message.role) || typeof message.content !== "string") {
+        throw new Error("Format pesan tidak valid.");
       }
       return { role: message.role, content: message.content.slice(0, 12000) };
     });
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
-      max_tokens: 2048,
-      system: "You are CloudeAI, a careful AI software development assistant. Help users understand, plan, write, and debug software. Explain assumptions, prefer safe changes, and never claim to have run code or modified files unless a connected tool actually did so.",
-      messages: safeMessages
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    let response: Response;
+    try {
+      response = await fetch(OLLAMA_URL + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: "system",
+              content: "You are CloudeAI, a helpful local-first software development assistant. Help users plan, understand, write and debug code. Be accurate, explain assumptions, and never claim to have run commands or modified files unless a connected tool actually did so. Prefer concise, practical answers."
+            },
+            ...safeMessages
+          ],
+          stream: false,
+          options: { temperature: 0.2 }
+        }),
+        signal: controller.signal,
+        cache: "no-store"
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
-    const text = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === "text")
-      .map((block) => block.text)
-      .join("\n");
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      return NextResponse.json({ error: "Ollama menolak permintaan (" + response.status + "). " + detail.slice(0, 500) }, { status: 502 });
+    }
 
-    return NextResponse.json({ text });
+    const data = await response.json();
+    const text = data?.message?.content;
+    if (typeof text !== "string" || !text.trim()) {
+      return NextResponse.json({ error: "Ollama mengembalikan jawaban kosong." }, { status: 502 });
+    }
+    return NextResponse.json({ text, model: data.model || model, provider: "ollama" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "The AI request failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof Error && error.name === "AbortError") {
+      return NextResponse.json({ error: "Ollama membutuhkan waktu terlalu lama. Coba prompt yang lebih singkat." }, { status: 504 });
+    }
+    const message = error instanceof Error ? error.message : "Permintaan AI gagal.";
+    const unavailable = message.includes("fetch failed") || message.includes("ECONNREFUSED");
+    return NextResponse.json({
+      error: unavailable
+        ? "Tidak dapat terhubung ke Ollama. Pastikan Ollama berjalan di Surface dan model qwen2.5-coder:1.5b sudah tersedia. Jalankan: ollama serve"
+        : message
+    }, { status: unavailable ? 503 : 500 });
   }
 }
