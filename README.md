@@ -1,46 +1,63 @@
-# CloudeAI
+# CloudeAI — Local Edition
 
-CloudeAI is a web-based AI workspace and a companion terminal chat client. The existing Claude Code source tree is retained alongside the new application.
+CloudeAI is a local-first AI workspace and terminal assistant powered by [Ollama](https://ollama.com). No Anthropic API key or paid cloud inference is required when running on your own computer.
 
-## Web app
+## Requirements
 
-The Next.js application lives at the repository root and is designed for Vercel.
+- Windows 10/11, macOS, or Linux
+- Node.js 20+
+- Ollama installed and running
+- A model downloaded locally (default: `qwen2.5-coder:1.5b`)
 
-1. Install Node.js 20 or newer.
-2. Run `npm install`.
-3. Set `ANTHROPIC_API_KEY` in your local environment.
-4. Run `npm run dev` and open http://localhost:3000.
-
-For Vercel, import this repository and set the project Root Directory to `./`. Add `ANTHROPIC_API_KEY` under Project Settings → Environment Variables, then redeploy. The key is read only by the server API route and must never be prefixed with `NEXT_PUBLIC_`.
-
-Optional model override: set `ANTHROPIC_MODEL` to a model available to your Anthropic account.
-
-## Terminal chat client
-
-The companion CLI runs in Node.js and uses the same Anthropic API key:
+## Quick start — Windows PowerShell
 
 ```powershell
-$env:ANTHROPIC_API_KEY="your-api-key"
+ollama pull qwen2.5-coder:1.5b
+ollama list
+git clone https://github.com/adnanyogi88-dev/cloudeai.git
+cd cloudeai
 npm install
+npm run dev
+```
+
+Open http://localhost:3000. The Next.js server calls Ollama at `http://127.0.0.1:11434`; the browser never calls Ollama directly.
+
+## Optional local configuration
+
+Copy `.env.example` to `.env.local` if you need to change the defaults:
+
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5-coder:1.5b
+```
+
+These are server-side variables. Do not prefix them with `NEXT_PUBLIC_`.
+
+## Terminal assistant
+
+Open another PowerShell window in the repository folder:
+
+```powershell
 npm run cli
 ```
 
-macOS/Linux:
+Commands: `/clear` resets chat history and `/exit` quits.
 
-```bash
-export ANTHROPIC_API_KEY="your-api-key"
-npm install
-npm run cli
-```
+## API endpoints
 
-Commands inside the CLI: `/clear` resets conversation history and `/exit` quits.
+- `GET /api/models` — checks Ollama and lists installed models.
+- `POST /api/chat` — sends chat messages to the selected local model.
 
-## Important scope
+## Important: local runtime vs Vercel
 
-The web and terminal clients currently provide AI chat, not remote shell execution, repository write access, user accounts, or persistent chat storage. Those capabilities require additional authentication, authorization, isolated execution, and storage services before they can safely be enabled.
+Ollama runs on your Surface, not inside Vercel. The local AI chat works when Next.js is also running on that Surface with `npm run dev`. A Vercel deployment cannot access `127.0.0.1` on your Surface; its local-model API will report that Ollama is unavailable. Keep Vercel for source previews/static UI, or later connect it to a separately secured machine/server that hosts Ollama. Do not expose Ollama's port publicly without authentication and network protections.
+
+## Current scope
+
+This integration provides local chat and a terminal chat client. It does not yet grant the model filesystem access, arbitrary shell execution, or autonomous repository modifications. Those agent tools will be added separately with workspace restrictions, explicit approvals, and command allowlists.
 
 ## Security
 
-- Keep API keys in server-side environment variables.
-- Never commit `.env` files or secrets.
-- Do not expose API keys in browser code.
+- Never commit `.env.local` or API keys.
+- Keep Ollama bound to localhost for local-only use.
+- Review generated code before using it.
