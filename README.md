@@ -1,50 +1,46 @@
-
 # CloudeAI
 
-Repository for the CloudeAI project, based on the Claude Code source repository.
+CloudeAI is a web-based AI workspace and a companion terminal chat client. The existing Claude Code source tree is retained alongside the new application.
 
-## Overview
+## Web app
 
-CloudeAI is an AI-powered coding project designed to help developers work with codebases, automate development tasks, and improve productivity through AI-assisted workflows.
+The Next.js application lives at the repository root and is designed for Vercel.
 
-## Project Structure
+1. Install Node.js 20 or newer.
+2. Run `npm install`.
+3. Set `ANTHROPIC_API_KEY` in your local environment.
+4. Run `npm run dev` and open http://localhost:3000.
 
-This repository contains the source code, modules, plugins, scripts, and development resources.
+For Vercel, import this repository and set the project Root Directory to `./`. Add `ANTHROPIC_API_KEY` under Project Settings → Environment Variables, then redeploy. The key is read only by the server API route and must never be prefixed with `NEXT_PUBLIC_`.
 
-## Requirements
+Optional model override: set `ANTHROPIC_MODEL` to a model available to your Anthropic account.
 
-- Node.js 18 or newer
-- Git
-- Windows, macOS, or Linux
+## Terminal chat client
 
-## Installation
+The companion CLI runs in Node.js and uses the same Anthropic API key:
 
-Clone the repository:
-
-```bash
-git clone https://github.com/adnanyogi88-dev/cloudeai.git
-```
-
-Navigate to the project:
-
-```bash
-cd cloudeai
-```
-
-Install dependencies:
-
-```bash
+```powershell
+$env:ANTHROPIC_API_KEY="your-api-key"
 npm install
+npm run cli
 ```
 
-## Development
+macOS/Linux:
 
-Run the project using the development command defined in `package.json`.
+```bash
+export ANTHROPIC_API_KEY="your-api-key"
+npm install
+npm run cli
+```
 
-## Repository
+Commands inside the CLI: `/clear` resets conversation history and `/exit` quits.
 
-GitHub: https://github.com/adnanyogi88-dev/cloudeai
+## Important scope
 
-## License
+The web and terminal clients currently provide AI chat, not remote shell execution, repository write access, user accounts, or persistent chat storage. Those capabilities require additional authentication, authorization, isolated execution, and storage services before they can safely be enabled.
 
-Refer to the LICENSE file included in this repository.
+## Security
+
+- Keep API keys in server-side environment variables.
+- Never commit `.env` files or secrets.
+- Do not expose API keys in browser code.
