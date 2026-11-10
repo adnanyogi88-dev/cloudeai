@@ -1,72 +1,50 @@
-# Claude Code
 
-![](https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square) [![npm]](https://www.npmjs.com/package/@anthropic-ai/claude-code)
+# CloudeAI
 
-[npm]: https://img.shields.io/npm/v/@anthropic-ai/claude-code.svg?style=flat-square
+Repository for the CloudeAI project, based on the Claude Code source repository.
 
-Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows -- all through natural language commands. Use it in your terminal, IDE, or tag @claude on Github.
+## Overview
 
-**Learn more in the [official documentation](https://code.claude.com/docs/en/overview)**.
+CloudeAI is an AI-powered coding project designed to help developers work with codebases, automate development tasks, and improve productivity through AI-assisted workflows.
 
-<img src="./demo.gif" />
+## Project Structure
 
-## Get started
-> [!NOTE]
-> Installation via npm is deprecated. Use one of the recommended methods below.
+This repository contains the source code, modules, plugins, scripts, and development resources.
 
-For more installation options, uninstall steps, and troubleshooting, see the [setup documentation](https://code.claude.com/docs/en/setup).
+## Requirements
 
-1. Install Claude Code:
+- Node.js 18 or newer
+- Git
+- Windows, macOS, or Linux
 
-    **MacOS/Linux (Recommended):**
-    ```bash
-    curl -fsSL https://claude.ai/install.sh | bash
-    ```
+## Installation
 
-    **Homebrew (MacOS/Linux):**
-    ```bash
-    brew install --cask claude-code
-    ```
+Clone the repository:
 
-    **Windows (Recommended):**
-    ```powershell
-    irm https://claude.ai/install.ps1 | iex
-    ```
+```bash
+git clone https://github.com/adnanyogi88-dev/cloudeai.git
+```
 
-    **WinGet (Windows):**
-    ```powershell
-    winget install Anthropic.ClaudeCode
-    ```
+Navigate to the project:
 
-    **NPM (Deprecated):**
-    ```bash
-    npm install -g @anthropic-ai/claude-code
-    ```
+```bash
+cd cloudeai
+```
 
-2. Navigate to your project directory and run `claude`.
+Install dependencies:
 
-## Plugins
+```bash
+npm install
+```
 
-Anthropic's Claude Code plugins are developed in [claude-plugins-official](https://github.com/anthropics/claude-plugins-official). See the [plugins directory](./plugins/README.md) for more about plugins.
+## Development
 
-## Reporting Bugs
+Run the project using the development command defined in `package.json`.
 
-We welcome your feedback. Use the `/bug` command to report issues directly within Claude Code, or file a [GitHub issue](https://github.com/anthropics/claude-code/issues).
+## Repository
 
-## Connect on Discord
+GitHub: https://github.com/adnanyogi88-dev/cloudeai
 
-Join the [Claude Developers Discord](https://anthropic.com/discord) to connect with other developers using Claude Code. Get help, share feedback, and discuss your projects with the community.
+## License
 
-## Data collection, usage, and retention
-
-When you use Claude Code, we collect feedback, which includes usage data (such as code acceptance or rejections), associated conversation data, and user feedback submitted via the `/bug` command.
-
-### How we use your data
-
-See our [data usage policies](https://code.claude.com/docs/en/data-usage).
-
-### Privacy safeguards
-
-We have implemented several safeguards to protect your data, including limited retention periods for sensitive information, restricted access to user session data, and clear policies against using feedback for model training.
-
-For full details, please review our [Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms) and [Privacy Policy](https://www.anthropic.com/legal/privacy).
+Refer to the LICENSE file included in this repository.
