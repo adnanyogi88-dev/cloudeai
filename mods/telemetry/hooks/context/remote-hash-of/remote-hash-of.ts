@@ -18,7 +18,14 @@ export async function remoteHashOf(
     return undefined
   }
 
+  // TextEncoder returns a standalone Uint8Array. Copy into a fresh
+  // ArrayBuffer-backed view so newer Node type definitions agree with
+  // the DOM BufferSource type expected by SubtleCrypto.
+  const encoded = new TextEncoder().encode(normalized)
+  const digestInput = new Uint8Array(encoded.byteLength)
+  digestInput.set(encoded)
+
   return hexOf(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized)),
+    await crypto.subtle.digest('SHA-256', digestInput.buffer as ArrayBuffer),
   ).slice(0, REMOTE_HASH_LENGTH)
 }
