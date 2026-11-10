@@ -17,38 +17,62 @@ interface GitHubReaction {
   content: string;
 }
 
-async function githubRequest<T>(endpoint: string, token: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(\`https://api.github.com\${endpoint}\`, {
+async function githubRequest<T>(
+  endpoint: string,
+  token: string,
+  method = "GET",
+  body?: unknown
+) {
+  const response = await fetch("https://api.github.com" + endpoint, {
     method,
     headers: {
-      Authorization: \`Bearer \${token}\`,
+      Authorization: "Bearer " + token,
       Accept: "application/vnd.github.v3+json",
       "User-Agent": "auto-close-duplicates-script",
-      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok) throw new Error(\`GitHub API request failed: \${response.status} \${response.statusText}\`);
-  return response.json() as Promise<T>;
+
+  if (!response.ok) {
+    throw new Error("GitHub API request failed: " + response.status + " " + response.statusText);
+  }
+
+  return (await response.json()) as T;
 }
 
 function extractDuplicateIssueNumber(commentBody: string): number | null {
-  const issueMatch: RegExpExecArray | null = /#([0-9]+)/.exec(commentBody);
+  const issueMatch = /#([0-9]+)/.exec(commentBody);
   if (issueMatch) return Number.parseInt(issueMatch[1], 10);
 
-  const urlMatch: RegExpExecArray | null =
-    /github\.com\/[^/]+\/[^/]+\/issues\/([0-9]+)/.exec(commentBody);
+  const urlMatch = /github\.com\/[^/]+\/[^/]+\/issues\/([0-9]+)/.exec(commentBody);
   if (urlMatch) return Number.parseInt(urlMatch[1], 10);
   return null;
 }
 
-async function closeIssueAsDuplicate(owner: string, repo: string, issueNumber: number, duplicateOfNumber: number, token: string): Promise<void> {
-  await githubRequest(\`/repos/\${owner}/\${repo}/issues/\${issueNumber}\`, token, "PATCH", {
-    state: "closed", state_reason: "duplicate", labels: ["duplicate"],
-  });
-  await githubRequest(\`/repos/\${owner}/\${repo}/issues/\${issueNumber}/comments\`, token, "POST", {
-    body: \`This issue has been automatically closed as a duplicate of #\${duplicateOfNumber}.\n\nIf this is incorrect, please re-open this issue or create a new one.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\`,
-  });
+async function closeIssueAsDuplicate(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  duplicateOfNumber: number,
+  token: string
+): Promise<void> {
+  await githubRequest(
+    "/repos/" + owner + "/" + repo + "/issues/" + issueNumber,
+    token,
+    "PATCH",
+    { state: "closed", state_reason: "duplicate", labels: ["duplicate"] }
+  );
+  await githubRequest(
+    "/repos/" + owner + "/" + repo + "/issues/" + issueNumber + "/comments",
+    token,
+    "POST",
+    {
+      body: "This issue has been automatically closed as a duplicate of #" +
+        duplicateOfNumber +
+        ".\n\nIf this is incorrect, please re-open this issue or create a new one.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)",
+    }
+  );
 }
 
 async function autoCloseDuplicates(): Promise<void> {
@@ -64,7 +88,8 @@ async function autoCloseDuplicates(): Promise<void> {
   const allIssues: GitHubIssue[] = [];
   for (let page = 1; page <= 20; page++) {
     const pageIssues = await githubRequest<GitHubIssue[]>(
-      \`/repos/\${owner}/\${repo}/issues?state=open&per_page=100&page=\${page}\`, token
+      "/repos/" + owner + "/" + repo + "/issues?state=open&per_page=100&page=" + page,
+      token
     );
     if (pageIssues.length === 0) break;
     allIssues.push(...pageIssues.filter(issue => new Date(issue.created_at) <= threeDaysAgo));
@@ -73,7 +98,8 @@ async function autoCloseDuplicates(): Promise<void> {
   let candidateCount = 0;
   for (const issue of allIssues) {
     const comments = await githubRequest<GitHubComment[]>(
-      \`/repos/\${owner}/\${repo}/issues/\${issue.number}/comments\`, token
+      "/repos/" + owner + "/" + repo + "/issues/" + issue.number + "/comments",
+      token
     );
     const dupeComments = comments.filter(comment =>
       comment.body.includes("Found") &&
@@ -88,7 +114,8 @@ async function autoCloseDuplicates(): Promise<void> {
     if (comments.some(comment => new Date(comment.created_at) > dupeCommentDate)) continue;
 
     const reactions = await githubRequest<GitHubReaction[]>(
-      \`/repos/\${owner}/\${repo}/issues/comments/\${lastDupeComment.id}/reactions\`, token
+      "/repos/" + owner + "/" + repo + "/issues/comments/" + lastDupeComment.id + "/reactions",
+      token
     );
     if (reactions.some(reaction => reaction.user.id === issue.user.id && reaction.content === "-1")) continue;
 
@@ -98,12 +125,12 @@ async function autoCloseDuplicates(): Promise<void> {
     candidateCount++;
     try {
       await closeIssueAsDuplicate(owner, repo, issue.number, duplicateIssueNumber, token);
-      console.log(\`[SUCCESS] Closed issue #\${issue.number} as duplicate of #\${duplicateIssueNumber}\`);
+      console.log("[SUCCESS] Closed issue #" + issue.number + " as duplicate of #" + duplicateIssueNumber);
     } catch (error) {
-      console.error(\`[ERROR] Failed to close issue #\${issue.number}: \${error}\`);
+      console.error("[ERROR] Failed to close issue #" + issue.number + ": " + error);
     }
   }
-  console.log(\`[DEBUG] Processed \${allIssues.length} issues; \${candidateCount} duplicate candidates\`);
+  console.log("[DEBUG] Processed " + allIssues.length + " issues; " + candidateCount + " duplicate candidates");
 }
 
 autoCloseDuplicates().catch(console.error);
